@@ -24,7 +24,6 @@ public class MainActivity extends AppCompatActivity {
         //设置连接服务器超时时间
         ftpClient.setConnectTimeout(10000);
 
-
         try {
             //登录
             ftpClient.login("username", "password");
@@ -46,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
 
             //重命名文件
             ftpClient.rename("旧文件名.txt","新文件名.txt");
+            //aaaaaaaa
         } catch (IOException e) {
             e.printStackTrace();
         }
