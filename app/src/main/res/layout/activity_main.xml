@@ -66,4 +66,15 @@
         android:text="上传"
         app:layout_constraintStart_toEndOf="@+id/btn_open"
         app:layout_constraintTop_toBottomOf="@+id/Login" />
+
+    <Button
+        android:id="@+id/btn_test"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="176dp"
+        android:layout_marginTop="92dp"
+        android:text="Button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

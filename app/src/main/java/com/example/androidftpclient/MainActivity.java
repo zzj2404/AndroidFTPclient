@@ -36,6 +36,7 @@ import org.apache.commons.net.ftp.FTPReply;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -45,8 +46,9 @@ public class MainActivity extends AppCompatActivity {
     private Button btn_file;
     private Button btn_upload;
     private TextView tv;
+    private Button btn_test;
 
-    private ArrayList files;
+    private List<File> files;
     private FTPClient ftpClient;
     private FTPOperationProcessor FTPProcessor;
     @Override
@@ -58,13 +60,13 @@ public class MainActivity extends AppCompatActivity {
         login = findViewById(R.id.Login);
         btn_file= (Button) findViewById(R.id.btn_open);
         btn_upload = (Button) findViewById(R.id.btn_upload);
-
+        btn_test = (Button) findViewById(R.id.btn_test);
+        files = new ArrayList<>();
         tv = (TextView) findViewById(R.id.tv);
-        files = new ArrayList<File>();
 
         requestReadExternalPermission();
 
-        FTPProcessor = new FTPOperationProcessor();
+        FTPProcessor = new FTPOperationProcessor(this);
 
         ftpClient = new FTPClient();
         //根据服务器配置设置字符编码
@@ -92,13 +94,18 @@ public class MainActivity extends AppCompatActivity {
         btn_upload.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    FTPProcessor.uploadFile("/",(File)files.get(0),((File)files.get(0)).length());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                System.out.println("click");
+                    upload();
             }
         });
+
+        btn_test.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                createDirectory("/test1/haha/");
+            }
+        });
+
         login.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -138,48 +145,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void Login() {
-
-//        try {
-//            if(FTPProcessor.connect("10.250.154.69",21,this.username.getText().toString(),this.password.getText().toString())){
-//                Toast.makeText(MainActivity.this, "登录成功^_^", Toast.LENGTH_SHORT).show();
-//            }
-//            else{
-//                Toast.makeText(MainActivity.this, "登录失败>_<", Toast.LENGTH_SHORT).show();
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            FTPProcessor.connect("10.250.184.248",21,"john","1234");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    private void createDirectory(String path){
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    //登录
-                    ftpClient.connect("10.250.154.69",21);
-//            ftpClient.login(this.username.getText().toString(), this.password.getText().toString());
-                    ftpClient.login("john", "1234");
+                    FTPProcessor.createDirectory(path);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                int replyCode = ftpClient.getReplyCode();
-                if (!FTPReply.isPositiveCompletion(replyCode)) {
-                    try {
-                        ftpClient.disconnect();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+            }
+        }).start();
+    }
+    private void upload(){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    for (int i=0;i<files.size();i++){
+                        String remotedirectory = "/test1";
+                        System.out.println(FTPProcessor.upload(files.get(i).getAbsolutePath(),remotedirectory+"/"+files.get(i).getName()));
                     }
-                    Looper.prepare();
-                    Toast.makeText(MainActivity.this, "登录失败>_<", Toast.LENGTH_SHORT).show();
-                    Looper.loop();
-                }else {
-                    Looper.prepare();
-                    Toast.makeText(MainActivity.this, "登录成功^_^", Toast.LENGTH_SHORT).show();
-                    Looper.loop();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }).start();
-
     }
-
 
     private String path;
     @Override
@@ -206,6 +204,7 @@ public class MainActivity extends AppCompatActivity {
                     if (uri != null) {
                         String path1 = FileUtils.getPath(this, uri);//使用工具类对uri进行转化
                         files.add(new File(path1));
+                        //tv.setText(path1);
                         //File file = new File(path1);
                     }
                     break;

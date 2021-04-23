@@ -1,6 +1,8 @@
 package com.example.androidftpclient;
 
+import android.content.Context;
 import android.nfc.Tag;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -14,6 +16,8 @@ import java.io.RandomAccessFile;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
+
+import static java.util.jar.Pack200.Packer.ERROR;
 
 
 /**
@@ -36,17 +40,25 @@ import org.apache.commons.net.ftp.FTPReply;
 
 public class FTPOperationProcessor {
     private FTPClient client = new FTPClient();
-    /** 默认编码 */
-    public final static String ENCODING = "GBK";
+    /**
+     * 默认编码
+     */
+    public final static String ENCODING = "UTF-8";
 
-    /** FTP传输用的编码 */
+    /**
+     * FTP传输用的编码
+     */
     public final static String FTP_ENCODING = "ISO-8859-1";
 
-    /** 目录前缀 */
+    /**
+     * 目录前缀
+     */
     public final static String PREFIX = "/";
+    Context main;
 
-    public FTPOperationProcessor() {
+    public FTPOperationProcessor(Context main) {
         super();
+        this.main = main;
     }
 
     public enum DownloadStatus {
@@ -57,6 +69,7 @@ public class FTPOperationProcessor {
         DOWNLOAD_NEW_SUCCESS, // 全新下载文件成功
         DOWNLOAD_NEW_FAILED; // 全新下载文件失败
     }
+
     public enum UploadStatus {
         CREATE_DIRECTORY_FAIL, // 远程服务器相应目录创建失败
         CREATE_DIRECTORY_SUCCESS, // 远程服务器闯将目录成功
@@ -68,42 +81,65 @@ public class FTPOperationProcessor {
         UPLOAD_FROM_BREAK_FAILED, // 断点续传失败
         DELETE_REMOTE_FAILD; // 删除远程文件失败
     }
+
     private static final String TAG = "MainActivity";
+
     /**
      * 连接FTP服务器
      *
-     * @param hostname
-     *            服务器IP，或主机名
-     * @param port
-     *            端口号
-     * @param username
-     *            用户名
-     * @param password
-     *            密码
-     * @return 连接成功返回true,失败返回false
+     * @param hostname 服务器IP，或主机名
+     * @param port     端口号
+     * @param username 用户名
+     * @param password 密码
+     * @return 连接成功返回true, 失败返回false
      * @throws IOException
      */
-    public boolean connect(String hostname, int port, String username,
-                           String password) throws IOException {
-        int reply;
-        client.connect(hostname,port);
-        System.out.println("Connected to " + hostname + ".");
-        System.out.println(client.getReplyString());
-        reply = client.getReplyCode();
-
-        if (!FTPReply.isPositiveCompletion(reply)) {
-            client.disconnect();
-            Log.d(TAG,"FTP服务器拒绝连接！");
-            System.out.println("FTP服务器拒绝连接！");
-            throw new IOException("FTP服务器拒绝连接！");
-        } else {
-            if (client.login(username, password)) {
-                client.setListHiddenFiles(true);
-                Log.d(TAG,"连接成功！");
-                return true;
+    public void connect(String hostname, int port, String username,
+                        String password) throws IOException {
+//        int reply;
+//        client.connect(hostname,port);
+//        System.out.println("Connected to " + hostname + ".");
+//        System.out.println(client.getReplyString());
+//        reply = client.getReplyCode();
+//
+//        if (!FTPReply.isPositiveCompletion(reply)) {
+//            client.disconnect();
+//            Log.d(TAG,"FTP服务器拒绝连接！");
+//            System.out.println("FTP服务器拒绝连接！");
+//            throw new IOException("FTP服务器拒绝连接！");
+//        } else {
+//            if (client.login(username, password)) {
+//                client.setListHiddenFiles(true);
+//                Log.d(TAG,"连接成功！");
+//                return true;
+//            }
+//        }
+//        return false;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    //登录
+                    client.connect(hostname, port);
+//            ftpClient.login(this.username.getText().toString(), this.password.getText().toString());
+                    client.login(username, password);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                int replyCode = client.getReplyCode();
+                if (!FTPReply.isPositiveCompletion(replyCode)) {
+                    try {
+                        client.disconnect();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    ThreadToast("登录失败>_<");
+                } else {
+                    ThreadToast("登录成功^_^");
+                }
             }
-        }
-        return false;
+        }).start();
+
     }
 
     /**
@@ -121,8 +157,7 @@ public class FTPOperationProcessor {
     /**
      * 遍历服务器的某一目录
      *
-     * @param pathname
-     *            FTP服务器的路径，如/dir1/dir2/
+     * @param pathname FTP服务器的路径，如/dir1/dir2/
      * @throws IOException
      */
     public void traverseDirectory(String pathname) throws IOException {
@@ -134,8 +169,7 @@ public class FTPOperationProcessor {
     /**
      * 遍历FTP服务器的目录
      *
-     * @param fileList
-     *            文件列表
+     * @param fileList 文件列表
      * @throws IOException
      */
     private void traverse(FTPFile[] fileList) throws IOException {
@@ -171,10 +205,8 @@ public class FTPOperationProcessor {
     /**
      * 下载单个文件
      *
-     * @param remote
-     *            远端文件
-     * @param localFile
-     *            本地文件
+     * @param remote    远端文件
+     * @param localFile 本地文件
      * @throws IOException
      */
     public DownloadStatus download(String remote, File localFile)
@@ -223,11 +255,9 @@ public class FTPOperationProcessor {
     /**
      * 上传文件到FTP服务器，支持断点续传
      *
-     * @param local
-     *            本地文件名称，绝对路径
-     * @param remote
-     *            远程文件路径，使用/home/directory1/subdirectory/file.ext
-     *            按照Linux上的路径指定方式，支持多级目录嵌套，支持递归创建不存在的目录结构
+     * @param local  本地文件名称，绝对路径
+     * @param remote 远程文件路径，使用/home/directory1/subdirectory/file.ext
+     *               按照Linux上的路径指定方式，支持多级目录嵌套，支持递归创建不存在的目录结构
      * @return 上传结果
      * @throws IOException
      */
@@ -237,40 +267,47 @@ public class FTPOperationProcessor {
         // 设置以二进制流的方式传输
         client.setFileType(FTPClient.BINARY_FILE_TYPE);
         client.setControlEncoding(ENCODING);
-        UploadStatus result;
+        UploadStatus result=UploadStatus.DELETE_REMOTE_FAILD;
         // 对远程目录的处理
-        String remoteFileName = remote;
+        String remoteFileName = remote.substring(remote.lastIndexOf("/") + 1);
+        String directory = remote.substring(0,remote.lastIndexOf("/"));
         if (remote.contains("/")) {
-            remoteFileName = remote.substring(remote.lastIndexOf("/") + 1);
             // 创建服务器远程目录结构，创建失败直接返回
             // 以下两句存在问题??
-            // if (createDirectory(remote) == UploadStatus.CREATE_DIRECTORY_FAIL) {
-            // return UploadStatus.CREATE_DIRECTORY_FAIL;
-            // }
+             if (createDirectory(remote) == UploadStatus.CREATE_DIRECTORY_FAIL) {
+                return UploadStatus.CREATE_DIRECTORY_FAIL;
+             }
         }
         // 检查远程是否存在文件
-        FTPFile[] files = client.listFiles(new String(remoteFileName
-                .getBytes(ENCODING), FTP_ENCODING));
-        if (files != null && files.length == 1) {
-            long remoteSize = files[0].getSize();
-            File f = new File(local);
-            long localSize = f.length();
-            if (remoteSize == localSize) {
-                return UploadStatus.FILE_EXITS;
-            } else if (remoteSize > localSize) {
-                return UploadStatus.REMOTE_BIGGER_LOCAL;
-            }
-            // 尝试移动文件内读取指针,实现断点续传
-            result = uploadFile(remoteFileName, f, remoteSize);
-            // 如果断点续传没有成功，则删除服务器上文件，重新上传
-            if (result == UploadStatus.UPLOAD_FROM_BREAK_FAILED) {
-                if (!client.deleteFile(remoteFileName)) {
-                    return UploadStatus.DELETE_REMOTE_FAILD;
+        FTPFile[] files = client.listFiles(directory);
+        System.out.println("size "+files.length);
+        for (int i = 0; i < files.length; i++) {
+            System.out.println("list"+files[i].getName());
+            if (files[i].getName().equals(remoteFileName)){
+                long remoteSize = files[i].getSize();
+                File f = new File(local);
+                long localSize = f.length();
+                if (remoteSize == localSize) {
+                    ThreadToast("已经存在的文件>_<");
+                    return UploadStatus.FILE_EXITS;
+                } else if (remoteSize > localSize) {
+                    return UploadStatus.REMOTE_BIGGER_LOCAL;
                 }
-                result = uploadFile(remoteFileName, f, 0);
+                // 尝试移动文件内读取指针,实现断点续传
+                result = uploadFile(remote, f, remoteSize);
+                // 如果断点续传没有成功，则删除服务器上文件，重新上传
+                if (result == UploadStatus.UPLOAD_FROM_BREAK_FAILED) {
+                    if (!client.deleteFile(remote)) {
+                        return UploadStatus.DELETE_REMOTE_FAILD;
+                    }
+                    result = uploadFile(remote, f, 0);
+                    break;
+                }
             }
-        } else {
-            result = uploadFile(remoteFileName, new File(local), 0);
+            else {
+                result = uploadFile(remote, new File(local), 0);
+                break;
+            }
         }
         return result;
     }
@@ -278,46 +315,88 @@ public class FTPOperationProcessor {
     /**
      * 上传单个文件，断点续传功能
      *
-     * @param remote
+     * @param remoteFile
      *            远程文件
      * @param localFile
      *            本地文件
      * @throws IOException
      */
-    public UploadStatus uploadFile(String remote, File localFile, long remoteSize)
+
+    public UploadStatus uploadFile(String remoteFile, File localFile, long remoteSize)
             throws IOException {
-        UploadStatus status = null;
-        long localreadbytes = 0l;
-        RandomAccessFile raf = new RandomAccessFile(localFile, "r");
-        OutputStream out = client.appendFileStream(new String(remote
-                .getBytes(ENCODING), FTP_ENCODING));
-        // 断点续传,根据FTP服务器上文件与本地机器上文件的大小比较来判断
-        if (remoteSize > 0) {
+        UploadStatus status;
+        //显示进度的上传
+        long step = localFile.length() / 100;
+        long process = 0;
+        long localreadbytes = 0L;
+        RandomAccessFile raf = new RandomAccessFile(localFile,"r");
+        OutputStream out = client.appendFileStream(new String(remoteFile.getBytes("GBK"),"iso-8859-1"));
+        //断点续传
+        if(remoteSize>0){
             client.setRestartOffset(remoteSize);
+            process = remoteSize /step;
             raf.seek(remoteSize);
             localreadbytes = remoteSize;
         }
-        byte[] bytes = new byte[8096];
+        byte[] bytes = new byte[1024];
         int c;
-        while ((c = raf.read(bytes)) != -1) {
-            out.write(bytes, 0, c);
-            localreadbytes += c;
+        while((c = raf.read(bytes))!= -1){
+            out.write(bytes,0,c);
+            localreadbytes+=c;
+            if(localreadbytes / step != process){
+                process = localreadbytes / step;
+                System.out.println("上传进度:" + process);
+                //TODO 汇报上传状态
+            }
         }
-        if (out != null)
-            out.flush();
-        if (raf != null)
-            raf.close();
-        if (out != null)
-            out.close();
-        boolean result = client.completePendingCommand();
-        if (remoteSize > 0) {
-            status = result ? UploadStatus.UPLOAD_FROM_BREAK_SUCCESS
-                    : UploadStatus.UPLOAD_FROM_BREAK_FAILED;
-        } else {
-            status = result ? UploadStatus.UPLOAD_NEW_FILE_SUCCESS
-                    : UploadStatus.UPLOAD_NEW_FILE_FAILED;
+        out.flush();
+        raf.close();
+        out.close();
+        boolean result =client.completePendingCommand();
+        if(remoteSize > 0){
+            status = result?UploadStatus.UPLOAD_FROM_BREAK_SUCCESS:UploadStatus.UPLOAD_FROM_BREAK_FAILED;
+        }else {
+            status = result?UploadStatus.UPLOAD_NEW_FILE_SUCCESS:UploadStatus.UPLOAD_NEW_FILE_FAILED;
+        }
+        if (status == UploadStatus.UPLOAD_NEW_FILE_SUCCESS || status == UploadStatus.UPLOAD_FROM_BREAK_SUCCESS){
+            ThreadToast("上传成功^_^");
+        }
+        else{
+            ThreadToast("失败啦>_<");
         }
         return status;
+//        UploadStatus status = null;
+//        long localreadbytes = 0l;
+//        RandomAccessFile raf = new RandomAccessFile(localFile, "r");
+//        OutputStream out = client.appendFileStream(new String(remote
+//                .getBytes(ENCODING), FTP_ENCODING));
+//        // 断点续传,根据FTP服务器上文件与本地机器上文件的大小比较来判断
+//        if (remoteSize > 0) {
+//            client.setRestartOffset(remoteSize);
+//            raf.seek(remoteSize);
+//            localreadbytes = remoteSize;
+//        }
+//        byte[] bytes = new byte[8096];
+//        int c;
+//        while ((c = raf.read(bytes)) != -1) {
+//            out.write(bytes, 0, c);
+//            localreadbytes += c;
+//        }
+//        if (out != null)
+//            out.flush();
+//        if (raf != null)
+//            raf.close();
+//        if (out != null)
+//            out.close();
+//        boolean result = client.completePendingCommand();
+//        if (remoteSize > 0) {
+//            status = result ? UploadStatus.UPLOAD_FROM_BREAK_SUCCESS
+//                    : UploadStatus.UPLOAD_FROM_BREAK_FAILED;
+//        } else {
+//            status = result ? UploadStatus.UPLOAD_NEW_FILE_SUCCESS
+//                    : UploadStatus.UPLOAD_NEW_FILE_FAILED;
+//        }
+//        return status;
     }
 
     /**
@@ -328,10 +407,15 @@ public class FTPOperationProcessor {
      * @throws IOException
      */
     public UploadStatus createDirectory(String remote) throws IOException {
+//        String[] names = client.listNames();
+//        for ( int i = 0; i < names.length; i++) {
+//            System.out.println(names[i]);
+//        }
         int start = 0, end = 0;
         start = remote.startsWith("/") ? 1 : 0;
         end = remote.indexOf("/", start);
-        for (; start < end;) {
+        int subcount = 0;
+        for (; start < end;subcount++) {
             String subDirectory = remote.substring(start, end);
             if (!client.changeWorkingDirectory(new String(subDirectory
                     .getBytes(ENCODING), FTP_ENCODING))) {
@@ -347,6 +431,7 @@ public class FTPOperationProcessor {
             start = end + 1;
             end = remote.indexOf("/", start);
         }
+        for (int i =0;i<subcount;i++) client.changeToParentDirectory();
         return UploadStatus.CREATE_DIRECTORY_SUCCESS;
     }
 
@@ -405,6 +490,12 @@ public class FTPOperationProcessor {
                 return UploadStatus.CREATE_DIRECTORY_FAIL;
             }
         }
+    }
+
+    private void ThreadToast(String text){
+        Looper.prepare();
+        Toast.makeText(main, text, Toast.LENGTH_SHORT).show();
+        Looper.loop();
     }
 }
 
