@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.io.UnsupportedEncodingException;
 
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
@@ -435,6 +436,12 @@ public class FTPOperationProcessor {
         return UploadStatus.CREATE_DIRECTORY_SUCCESS;
     }
 
+
+    public FTPFile[] GetFiles(String remote) throws IOException {
+        FTPFile[] files = client.listFiles(new String(remote.getBytes(ENCODING),
+                FTP_ENCODING));
+        return files;
+    }
     /**
      * 递归遍历本地机器的要上传的目录，遍历的同时，在FTP服务器上创建目录
      * （如果在FTP服务器上目录不存在的话），上传文件
@@ -497,5 +504,6 @@ public class FTPOperationProcessor {
         Toast.makeText(main, text, Toast.LENGTH_SHORT).show();
         Looper.loop();
     }
+
 }
 
