@@ -102,7 +102,22 @@ public class MainActivity extends AppCompatActivity {
         btn_test.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                createDirectory("/test1/haha/");
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        FTPFile[] files = new FTPFile[0];
+                        try {
+                            files = FTPProcessor.GetFiles("/test1/");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        System.out.println(files.length);
+                        for (int i = 0; i < files.length; i++) {
+                            System.out.println(files[i].getName()+files[i].getType());
+
+                        }
+                    }
+                }).start();
             }
         });
 
@@ -146,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void Login() {
         try {
-            FTPProcessor.connect("10.250.184.248",21,"john","1234");
+            FTPProcessor.connect("10.249.92.87",21,"john","1234");
         } catch (IOException e) {
             e.printStackTrace();
         }
