@@ -52,6 +52,12 @@ public class MainActivity extends AppCompatActivity {
         btn_test = (Button) findViewById(R.id.btn_test);
         files = new ArrayList<>();
         tv = (TextView) findViewById(R.id.tv);
+        recyclerView = findViewById(R.id.recycler_view_files);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(linearLayoutManager);
+        FileAdapter fileAdapter = new FileAdapter(this);
+        //fileAdapter.setFiles(FTPFile[]);
+        recyclerView.setAdapter(fileAdapter);
 
         requestReadExternalPermission();
 
