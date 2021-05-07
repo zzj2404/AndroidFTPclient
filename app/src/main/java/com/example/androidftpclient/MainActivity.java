@@ -1,37 +1,26 @@
 package com.example.androidftpclient;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.ClipData;
-import android.content.ContentUris;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import com.example.androidftpclient.FileUtils;
 
-import android.os.Looper;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
+import com.example.androidftpclient.Adapter.FileAdapter;
+
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
-import org.apache.commons.net.ftp.FTPReply;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,9 +36,9 @@ public class MainActivity extends AppCompatActivity {
     private Button btn_upload;
     private TextView tv;
     private Button btn_test;
+    private RecyclerView recyclerView;
 
     private List<File> files;
-    private FTPClient ftpClient;
     private FTPOperationProcessor FTPProcessor;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,13 +56,6 @@ public class MainActivity extends AppCompatActivity {
         requestReadExternalPermission();
 
         FTPProcessor = new FTPOperationProcessor(this);
-
-        ftpClient = new FTPClient();
-        //根据服务器配置设置字符编码
-        ftpClient.setControlEncoding("UTF-8");
-
-        //设置连接服务器超时时间
-        ftpClient.setConnectTimeout(10000);
 
 
         btn_file.setOnClickListener(new View.OnClickListener() {
@@ -102,7 +84,22 @@ public class MainActivity extends AppCompatActivity {
         btn_test.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                createDirectory("/test1/haha/");
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        FTPFile[] files = new FTPFile[0];
+                        try {
+                            files = FTPProcessor.GetFiles("/test1/");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        System.out.println(files.length);
+                        for (int i = 0; i < files.length; i++) {
+                            System.out.println(files[i].getName()+files[i].getType());
+
+                        }
+                    }
+                }).start();
             }
         });
 
@@ -112,36 +109,6 @@ public class MainActivity extends AppCompatActivity {
                 Login();
             }
         });
-
-
-
-
-
-//        try {
-//            //登录
-//            ftpClient.login(this.username.getText().toString(), this.password.getText().toString());
-//
-//            //获取当前文件列表
-//            FTPFile[] ftpFiles = ftpClient.listFiles();
-//
-//            //进入目录
-//            ftpClient.changeWorkingDirectory("directory1");
-//
-//            //返回上层目录
-//            ftpClient.changeToParentDirectory();
-//
-//            //新建文件夹
-//            ftpClient.makeDirectory("myDirectory");
-//
-//            //删除文件
-//            ftpClient.deleteFile("a.txt");
-//
-//            //重命名文件
-//            ftpClient.rename("旧文件名.txt","新文件名.txt");
-//            //aaaaaaaa
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     private void Login() {
