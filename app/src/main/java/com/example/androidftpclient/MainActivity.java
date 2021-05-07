@@ -100,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
         main = this;
 
         requestReadExternalPermission();
+        requestWriteExternalPermission();
 
         FTPProcessor = new FTPOperationProcessor(this);
 
@@ -310,6 +311,24 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("NewApi")
+    private void requestWriteExternalPermission(){
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "WRITE permission IS NOT granted...");
+
+            if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+
+                Log.d(TAG, "11111111111111");
+            } else {
+                // 0 是自己定义的请求coude
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+                Log.d(TAG, "222222222222");
+            }
+        } else {
+            Log.d(TAG, "WRITE permission is granted...");
+        }
+    }
 
 }
 
