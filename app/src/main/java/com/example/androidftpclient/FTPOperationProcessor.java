@@ -12,7 +12,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
+
 
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
@@ -503,5 +504,6 @@ public class FTPOperationProcessor {
         Toast.makeText(main, text, Toast.LENGTH_SHORT).show();
         Looper.loop();
     }
+
 }
 

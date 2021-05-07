@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void Login() {
         try {
-            FTPProcessor.connect("10.250.184.248",21,"john","1234");
+            FTPProcessor.connect("10.249.92.87",21,"john","1234");
         } catch (IOException e) {
             e.printStackTrace();
         }
