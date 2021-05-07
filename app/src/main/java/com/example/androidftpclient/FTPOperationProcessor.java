@@ -3,7 +3,9 @@ package com.example.androidftpclient;
 import android.content.Context;
 import android.nfc.Tag;
 import android.os.Looper;
+import android.os.MessageQueue;
 import android.util.Log;
+import android.view.Gravity;
 import android.widget.Toast;
 
 import java.io.File;
@@ -14,6 +16,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
@@ -203,56 +206,164 @@ public class FTPOperationProcessor {
         client.changeToParentDirectory();
     }
 
-    /**
-     * 下载单个文件
-     *
-     * @param remote    远端文件
-     * @param localFile 本地文件
+//    /**
+//     * 下载单个文件
+//     *
+//     * @param remote    远端文件
+//     * @param localFile 本地文件
+//     * @throws IOException
+//     */
+//    public DownloadStatus download(String remote, File localFile)
+//            throws IOException {
+//        client.enterLocalPassiveMode();
+//        client.setFileType(FTPClient.BINARY_FILE_TYPE);
+//        DownloadStatus result = DownloadStatus.DOWNLOAD_NEW_SUCCESS;
+//        // 检查远程文件是否存在
+//        FTPFile[] files = client.listFiles(new String(remote.getBytes(ENCODING),
+//                FTP_ENCODING));
+//        if (files.length != 1) {
+//            System.out.println("远程文件不存在");
+//            return DownloadStatus.REMOTE_FILE_NOEXIST;
+//        }
+//        long lRemoteSize = files[0].getSize();
+//        // 本地存在文件，进行断点下载
+//        if (localFile.exists()) {
+//            long localSize = localFile.length();
+//            // 判断本地文件大小是否大于远程文件大小
+//            if (localSize >= lRemoteSize) {
+//                System.out.println("本地文件大于远程文件，下载中止");
+//                return DownloadStatus.LOCAL_BIGGER_REMOTE;
+//            }
+//            // 进行断点续传，并记录状态
+//            FileOutputStream out = new FileOutputStream(localFile, true);
+//            client.setRestartOffset(localSize);
+//            InputStream in = client.retrieveFileStream(new String(remote
+//                    .getBytes(ENCODING), FTP_ENCODING));
+//            FileUtils.copyStream(in, out);
+//            boolean isDo = client.completePendingCommand();
+//            if (isDo) {
+//                result = DownloadStatus.DOWNLOAD_FROM_BREAK_SUCCESS;
+//            } else {
+//                result = DownloadStatus.DOWNLOAD_FROM_BREAK_FAILED;
+//            }
+//        } else {
+//            localFile.createNewFile();
+//            FileOutputStream out = new FileOutputStream(localFile);
+//            InputStream in = client.retrieveFileStream(new String(remote
+//                    .getBytes(ENCODING), FTP_ENCODING));
+//            FileUtils.copyStream(in, out);
+//        }
+//        return result;
+//    }
+/** *//**
+     * 从FTP服务器上下载文件,支持断点续传，上传百分比汇报
+     * @param remote 远程文件路径
+     * @param localDirectory 本地文件路径
+     * @return 上传的状态
      * @throws IOException
      */
-    public DownloadStatus download(String remote, File localFile)
-            throws IOException {
+    public DownloadStatus download(String remote,String localDirectory) throws IOException{
+        //设置被动模式
         client.enterLocalPassiveMode();
-        client.setFileType(FTPClient.BINARY_FILE_TYPE);
-        DownloadStatus result = null;
-        // 检查远程文件是否存在
-        FTPFile[] files = client.listFiles(new String(remote.getBytes(ENCODING),
-                FTP_ENCODING));
-        if (files.length != 1) {
-            System.out.println("远程文件不存在");
-            return DownloadStatus.REMOTE_FILE_NOEXIST;
-        }
-        long lRemoteSize = files[0].getSize();
-        // 本地存在文件，进行断点下载
-        if (localFile.exists()) {
-            long localSize = localFile.length();
-            // 判断本地文件大小是否大于远程文件大小
-            if (localSize >= lRemoteSize) {
-                System.out.println("本地文件大于远程文件，下载中止");
-                return DownloadStatus.LOCAL_BIGGER_REMOTE;
-            }
-            // 进行断点续传，并记录状态
-            FileOutputStream out = new FileOutputStream(localFile, true);
-            client.setRestartOffset(localSize);
-            InputStream in = client.retrieveFileStream(new String(remote
-                    .getBytes(ENCODING), FTP_ENCODING));
-            FileUtils.copyStream(in, out);
-            boolean isDo = client.completePendingCommand();
-            if (isDo) {
-                result = DownloadStatus.DOWNLOAD_FROM_BREAK_SUCCESS;
-            } else {
-                result = DownloadStatus.DOWNLOAD_FROM_BREAK_FAILED;
-            }
-        } else {
-            localFile.createNewFile();
-            FileOutputStream out = new FileOutputStream(localFile);
-            InputStream in = client.retrieveFileStream(new String(remote
-                    .getBytes(ENCODING), FTP_ENCODING));
-            FileUtils.copyStream(in, out);
-        }
-        return result;
-    }
+        //设置以二进制方式传输
+        client.setFileType(FTP.BINARY_FILE_TYPE);
+        DownloadStatus result;
 
+        int index =remote.lastIndexOf('/');
+        String remoteDirectory = remote.substring(0,index);
+        String name = remote.substring(index + 1);
+        System.out.println("remoteDirectory:"+remoteDirectory);
+        System.out.println("name"+name);
+
+        //检查远程文件是否存在
+        FTPFile[] files = client.listFiles(new String(remoteDirectory.getBytes(ENCODING),
+                FTP_ENCODING));
+        for (int i = 0; i < files.length; i++) {
+            if (files[i].getName().equals(name)){
+                System.out.println("find file"+name);
+                String local = localDirectory + "/" + files[i].getName();
+
+                long lRemoteSize = files[0].getSize();
+                File f = new File(local);
+                //本地存在文件，进行断点下载
+                if(f.exists()){
+                    long localSize = f.length();
+                    //判断本地文件大小是否大于远程文件大小
+                    if(localSize >= lRemoteSize){
+                        System.out.println("本地文件大于远程文件，下载中止");
+                        return DownloadStatus.LOCAL_BIGGER_REMOTE;
+                    }
+
+                    //进行断点续传，并记录状态
+                    FileOutputStream out = new FileOutputStream(f,true);
+                    client.setRestartOffset(localSize);
+                    InputStream in = client.retrieveFileStream(new String(remote.getBytes("GBK"),"iso-8859-1"));
+
+
+                    byte[] bytes = new byte[1024];
+                    long step = lRemoteSize /100;
+                    long process=localSize /step;
+                    int c;
+                    while((c = in.read(bytes))!= -1){
+                        out.write(bytes,0,c);
+                        localSize+=c;
+                        long nowProcess = localSize /step;
+                        if(nowProcess > process){
+                            process = nowProcess;
+                            if(process % 10 == 0)
+                                System.out.println("下载进度："+process);
+                            //TODO 更新文件下载进度,值存放在process变量中
+                        }
+                    }
+                    in.close();
+                    out.close();
+                    boolean isDo = client.completePendingCommand();
+                    if(isDo){
+                        result = DownloadStatus.DOWNLOAD_FROM_BREAK_SUCCESS;
+                    }else {
+                        result = DownloadStatus.DOWNLOAD_FROM_BREAK_FAILED;
+                    }
+                }else {
+                    System.out.println("local not exist");
+
+                    //client.changeWorkingDirectory(remoteDirectory);
+                    InputStream in= client.retrieveFileStream(new String(remote.getBytes("GBK"),"iso-8859-1"));
+                    //InputStream in = null;
+                    System.out.println("break 1");
+                    OutputStream out = new FileOutputStream(f);
+                    System.out.println("break 2");
+                    byte[] bytes = new byte[1024];
+                    long step = lRemoteSize /100;
+                    long process=0;
+                    long localSize = 0L;
+                    int c;
+                    while((c = in.read(bytes))!= -1){
+                        out.write(bytes, 0, c);
+                        localSize+=c;
+                        long nowProcess = localSize /step;
+                        if(nowProcess > process){
+                            process = nowProcess;
+                            if(process % 10 == 0)
+                                System.out.println("下载进度："+process);
+                            //TODO 更新文件下载进度,值存放在process变量中
+                        }
+                    }
+                    in.close();
+                    out.close();
+                    boolean upNewStatus = client.completePendingCommand();
+                    if(upNewStatus){
+                        result = DownloadStatus.DOWNLOAD_NEW_SUCCESS;
+                    }else {
+                        result = DownloadStatus.DOWNLOAD_NEW_FAILED;
+                    }
+                }
+                System.out.println(result);
+                return result;
+            }
+        }
+        System.out.println("远程文件不存在");
+        return DownloadStatus.REMOTE_FILE_NOEXIST;
+    }
     /**
      * 上传文件到FTP服务器，支持断点续传
      *
@@ -269,6 +380,8 @@ public class FTPOperationProcessor {
         client.setFileType(FTPClient.BINARY_FILE_TYPE);
         client.setControlEncoding(ENCODING);
         UploadStatus result=UploadStatus.DELETE_REMOTE_FAILD;
+
+
         // 对远程目录的处理
         String remoteFileName = remote.substring(remote.lastIndexOf("/") + 1);
         String directory = remote.substring(0,remote.lastIndexOf("/"));
@@ -281,9 +394,9 @@ public class FTPOperationProcessor {
         }
         // 检查远程是否存在文件
         FTPFile[] files = client.listFiles(directory);
-        System.out.println("size "+files.length);
+        //System.out.println("size "+files.length);
         for (int i = 0; i < files.length; i++) {
-            System.out.println("list"+files[i].getName());
+            //System.out.println("list"+files[i].getName());
             if (files[i].getName().equals(remoteFileName)){
                 long remoteSize = files[i].getSize();
                 File f = new File(local);
@@ -354,17 +467,14 @@ public class FTPOperationProcessor {
         raf.close();
         out.close();
         boolean result =client.completePendingCommand();
+
         if(remoteSize > 0){
             status = result?UploadStatus.UPLOAD_FROM_BREAK_SUCCESS:UploadStatus.UPLOAD_FROM_BREAK_FAILED;
         }else {
             status = result?UploadStatus.UPLOAD_NEW_FILE_SUCCESS:UploadStatus.UPLOAD_NEW_FILE_FAILED;
         }
-        if (status == UploadStatus.UPLOAD_NEW_FILE_SUCCESS || status == UploadStatus.UPLOAD_FROM_BREAK_SUCCESS){
-            ThreadToast("上传成功^_^");
-        }
-        else{
-            ThreadToast("失败啦>_<");
-        }
+
+        System.out.println(status);
         return status;
 //        UploadStatus status = null;
 //        long localreadbytes = 0l;
@@ -500,10 +610,24 @@ public class FTPOperationProcessor {
     }
 
     private void ThreadToast(String text){
-        Looper.prepare();
-        Toast.makeText(main, text, Toast.LENGTH_SHORT).show();
-        Looper.loop();
+        Looper myLooper = Looper.myLooper();
+        Toast toast = null;
+        if (myLooper == null) {
+            Looper.prepare();
+            myLooper = Looper.myLooper();
+        }
+        if (toast == null) {
+            toast = Toast.makeText(main, text, Toast.LENGTH_SHORT);
+        }
+        toast.show();
+        if ( myLooper != null) {
+            Looper.loop();
+            myLooper.quit();
+        }
+        myLooper.quit();
     }
+
+
 
 }
 

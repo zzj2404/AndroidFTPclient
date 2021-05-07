@@ -19,7 +19,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import com.example.androidftpclient.FileUtils;
 
+import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -40,17 +42,48 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
+    private static final int UPLOAD_SUCCESS = 1;
+    private static final int UPLOAD_FAIL = 2;
+    private static final int DOWNLOAD_SUCCESS = 3;
+    private static final int DOWNLOAD_FAIL = 4;
+
     private EditText username;
     private EditText password;
     private Button login;
     private Button btn_file;
     private Button btn_upload;
+    private Button btn_download;
     private TextView tv;
     private Button btn_test;
 
     private List<File> files;
     private FTPClient ftpClient;
     private FTPOperationProcessor FTPProcessor;
+    private Context main;
+
+    @SuppressLint("HandlerLeak")
+    private Handler handler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+
+            switch (msg.what) {
+                case UPLOAD_SUCCESS:
+                    Toast.makeText(MainActivity.this, "上传成功^_^", Toast.LENGTH_LONG).show();
+                    break;
+                case UPLOAD_FAIL:
+                    Toast.makeText(MainActivity.this, "上传失败>_<", Toast.LENGTH_LONG).show();
+                    break;
+                case DOWNLOAD_SUCCESS:
+                    Toast.makeText(MainActivity.this, "下载成功^_^", Toast.LENGTH_LONG).show();
+                    break;
+                case DOWNLOAD_FAIL:
+                    Toast.makeText(MainActivity.this, "下载失败>_<", Toast.LENGTH_LONG).show();
+                    break;
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,9 +93,11 @@ public class MainActivity extends AppCompatActivity {
         login = findViewById(R.id.Login);
         btn_file= (Button) findViewById(R.id.btn_open);
         btn_upload = (Button) findViewById(R.id.btn_upload);
+        btn_download = (Button) findViewById(R.id.btn_download);
         btn_test = (Button) findViewById(R.id.btn_test);
         files = new ArrayList<>();
         tv = (TextView) findViewById(R.id.tv);
+        main = this;
 
         requestReadExternalPermission();
 
@@ -94,8 +129,14 @@ public class MainActivity extends AppCompatActivity {
         btn_upload.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                System.out.println("click");
-                    upload();
+                upload("/test1");
+            }
+        });
+
+        btn_download.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                download("/test1/test.jpg","/storage/emulated/0/Download");
             }
         });
 
@@ -107,14 +148,14 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         FTPFile[] files = new FTPFile[0];
                         try {
-                            files = FTPProcessor.GetFiles("/test1/");
+                            files = FTPProcessor.GetFiles("/test1");
+                            System.out.println("test size:"+files.length);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                         System.out.println(files.length);
                         for (int i = 0; i < files.length; i++) {
                             System.out.println(files[i].getName()+files[i].getType());
-
                         }
                     }
                 }).start();
@@ -161,7 +202,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void Login() {
         try {
-            FTPProcessor.connect("10.249.92.87",21,"john","1234");
+            FTPProcessor.connect("10.250.184.248",21,"john","1234");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -178,21 +219,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
     }
-    private void upload(){
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (int i=0;i<files.size();i++){
-                        String remotedirectory = "/test1";
-                        System.out.println(FTPProcessor.upload(files.get(i).getAbsolutePath(),remotedirectory+"/"+files.get(i).getName()));
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
+
+    private void upload(String remotePath){
+        Thread thread = new UploadThread(remotePath,files,FTPProcessor,handler);
+        thread.start();
     }
+
+    private void download(String remoteFilePath,String localPath){
+        Thread thread = new DownloadThread(remoteFilePath,localPath,FTPProcessor,handler);
+        thread.start();
+    }
+
 
     private String path;
     @Override
@@ -272,6 +309,7 @@ public class MainActivity extends AppCompatActivity {
 
         }
     }
+
 
 }
 
