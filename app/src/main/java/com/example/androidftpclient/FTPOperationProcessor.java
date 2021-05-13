@@ -14,7 +14,6 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 
-
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
@@ -436,6 +435,7 @@ public class FTPOperationProcessor {
         for (int i =0;i<subcount;i++) client.changeToParentDirectory();
         return UploadStatus.CREATE_DIRECTORY_SUCCESS;
     }
+
 
     public FTPFile[] GetFiles(String remote) throws IOException {
         FTPFile[] files = client.listFiles(new String(remote.getBytes(ENCODING),
