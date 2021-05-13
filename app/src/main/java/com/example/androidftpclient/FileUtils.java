@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -18,6 +19,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class FileUtils {
@@ -169,5 +172,23 @@ public class FileUtils {
             if (bos != null)
                 bos.close();
         }
+    }
+    /**
+     * 获取目录下所有文件
+     * @param path 指定目录路径
+     * @return
+     */
+    public static List<String> getFilesAllName(String path) {
+        File file=new File(path);
+        File[] files=file.listFiles();
+        if (files == null){
+            Log.e("error","空目录");
+            return null;
+        }
+        List<String> s = new ArrayList<>();
+        for(int i =0;i<files.length;i++){
+            s.add(files[i].getAbsolutePath());
+        }
+        return s;
     }
 }

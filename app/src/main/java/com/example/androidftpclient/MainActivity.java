@@ -1,27 +1,22 @@
 package com.example.androidftpclient;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.ClipData;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import com.example.androidftpclient.FileUtils;
 
-import android.os.Looper;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
+import com.example.androidftpclient.IOThread.DownloadThread;
+import com.example.androidftpclient.IOThread.UploadThread;
+
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -31,7 +26,6 @@ import android.widget.Toast;
 
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
-import org.apache.commons.net.ftp.FTPReply;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,17 +34,48 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
+    private static final int UPLOAD_SUCCESS = 1;
+    private static final int UPLOAD_FAIL = 2;
+    private static final int DOWNLOAD_SUCCESS = 3;
+    private static final int DOWNLOAD_FAIL = 4;
+
     private EditText username;
     private EditText password;
     private Button login;
     private Button btn_file;
     private Button btn_upload;
+    private Button btn_download;
     private TextView tv;
     private Button btn_test;
 
     private List<File> files;
     private FTPClient ftpClient;
     private FTPOperationProcessor FTPProcessor;
+    private Context main;
+
+    @SuppressLint("HandlerLeak")
+    private Handler handler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+
+            switch (msg.what) {
+                case UPLOAD_SUCCESS:
+                    Toast.makeText(MainActivity.this, "上传成功^_^", Toast.LENGTH_LONG).show();
+                    break;
+                case UPLOAD_FAIL:
+                    Toast.makeText(MainActivity.this, "上传失败>_<", Toast.LENGTH_LONG).show();
+                    break;
+                case DOWNLOAD_SUCCESS:
+                    Toast.makeText(MainActivity.this, "下载成功^_^", Toast.LENGTH_LONG).show();
+                    break;
+                case DOWNLOAD_FAIL:
+                    Toast.makeText(MainActivity.this, "下载失败>_<", Toast.LENGTH_LONG).show();
+                    break;
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,11 +85,14 @@ public class MainActivity extends AppCompatActivity {
         login = findViewById(R.id.Login);
         btn_file= (Button) findViewById(R.id.btn_open);
         btn_upload = (Button) findViewById(R.id.btn_upload);
+        btn_download = (Button) findViewById(R.id.btn_download);
         btn_test = (Button) findViewById(R.id.btn_test);
         files = new ArrayList<>();
         tv = (TextView) findViewById(R.id.tv);
+        main = this;
 
         requestReadExternalPermission();
+        requestWriteExternalPermission();
 
         FTPProcessor = new FTPOperationProcessor(this);
 
@@ -94,28 +122,48 @@ public class MainActivity extends AppCompatActivity {
         btn_upload.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                System.out.println("click");
-                    upload();
+                upload("/test1");
             }
         });
 
+        btn_download.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                download("/test1/test.jpg","/storage/emulated/0/Download");
+            }
+        });
+
+
+        //获取文件名列表的示例
         btn_test.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        FTPFile[] files = new FTPFile[0];
+
+                        //从server上指定目录获取文件名列表
+                        FTPFile[] files;
                         try {
-                            files = FTPProcessor.GetFiles("/test1/");
+                            files = FTPProcessor.GetFiles("/test1");
+                            System.out.println("test size:"+files.length);
+                            for (int i = 0; i < files.length; i++) {
+                                System.out.println(files[i].getName() + files[i].isDirectory() + files[i].isFile());
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        System.out.println(files.length);
-                        for (int i = 0; i < files.length; i++) {
-                            System.out.println(files[i].getName()+files[i].getType());
 
+
+                        //获取指定路径下的所有文件名
+                        String storageDir = Environment.getExternalStorageDirectory().toString();
+                        List<String> list;
+                        list = FileUtils.getFilesAllName(storageDir);
+                        for (int i = 0; i < list.size(); i++) {
+                            File f = new File(list.get(i));
+                            System.out.println(list.get(i) + f.isDirectory() + f.isFile());
                         }
+
                     }
                 }).start();
             }
@@ -129,39 +177,11 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-
-
-
-//        try {
-//            //登录
-//            ftpClient.login(this.username.getText().toString(), this.password.getText().toString());
-//
-//            //获取当前文件列表
-//            FTPFile[] ftpFiles = ftpClient.listFiles();
-//
-//            //进入目录
-//            ftpClient.changeWorkingDirectory("directory1");
-//
-//            //返回上层目录
-//            ftpClient.changeToParentDirectory();
-//
-//            //新建文件夹
-//            ftpClient.makeDirectory("myDirectory");
-//
-//            //删除文件
-//            ftpClient.deleteFile("a.txt");
-//
-//            //重命名文件
-//            ftpClient.rename("旧文件名.txt","新文件名.txt");
-//            //aaaaaaaa
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     private void Login() {
         try {
-            FTPProcessor.connect("10.249.92.87",21,"john","1234");
+            FTPProcessor.connect("10.250.184.248",21,"john","1234");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -178,21 +198,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
     }
-    private void upload(){
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (int i=0;i<files.size();i++){
-                        String remotedirectory = "/test1";
-                        System.out.println(FTPProcessor.upload(files.get(i).getAbsolutePath(),remotedirectory+"/"+files.get(i).getName()));
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
+
+    private void upload(String remotePath){
+        Thread thread = new UploadThread(remotePath,files,FTPProcessor,handler);
+        thread.start();
     }
+
+    private void download(String remoteFilePath,String localPath){
+        Thread thread = new DownloadThread(remoteFilePath,localPath,FTPProcessor,handler);
+        thread.start();
+    }
+
 
     private String path;
     @Override
@@ -270,6 +286,25 @@ public class MainActivity extends AppCompatActivity {
             default:
                 break;
 
+        }
+    }
+
+    @SuppressLint("NewApi")
+    private void requestWriteExternalPermission(){
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "WRITE permission IS NOT granted...");
+
+            if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+
+                Log.d(TAG, "11111111111111");
+            } else {
+                // 0 是自己定义的请求coude
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+                Log.d(TAG, "222222222222");
+            }
+        } else {
+            Log.d(TAG, "WRITE permission is granted...");
         }
     }
 
