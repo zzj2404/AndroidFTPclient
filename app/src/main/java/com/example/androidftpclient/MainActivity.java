@@ -1,29 +1,22 @@
 package com.example.androidftpclient;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.ClipData;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import com.example.androidftpclient.FileUtils;
 
+import com.example.androidftpclient.IOThread.DownloadThread;
+import com.example.androidftpclient.IOThread.UploadThread;
+
+import android.os.Environment;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -33,7 +26,6 @@ import android.widget.Toast;
 
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
-import org.apache.commons.net.ftp.FTPReply;
 
 import java.io.File;
 import java.io.IOException;
@@ -141,23 +133,37 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+
+        //获取文件名列表的示例
         btn_test.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        FTPFile[] files = new FTPFile[0];
+
+                        //从server上指定目录获取文件名列表
+                        FTPFile[] files;
                         try {
                             files = FTPProcessor.GetFiles("/test1");
                             System.out.println("test size:"+files.length);
+                            for (int i = 0; i < files.length; i++) {
+                                System.out.println(files[i].getName() + files[i].isDirectory() + files[i].isFile());
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        System.out.println(files.length);
-                        for (int i = 0; i < files.length; i++) {
-                            System.out.println(files[i].getName()+files[i].getType());
+
+
+                        //获取指定路径下的所有文件名
+                        String storageDir = Environment.getExternalStorageDirectory().toString();
+                        List<String> list;
+                        list = FileUtils.getFilesAllName(storageDir);
+                        for (int i = 0; i < list.size(); i++) {
+                            File f = new File(list.get(i));
+                            System.out.println(list.get(i) + f.isDirectory() + f.isFile());
                         }
+
                     }
                 }).start();
             }
@@ -171,34 +177,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-
-
-
-//        try {
-//            //登录
-//            ftpClient.login(this.username.getText().toString(), this.password.getText().toString());
-//
-//            //获取当前文件列表
-//            FTPFile[] ftpFiles = ftpClient.listFiles();
-//
-//            //进入目录
-//            ftpClient.changeWorkingDirectory("directory1");
-//
-//            //返回上层目录
-//            ftpClient.changeToParentDirectory();
-//
-//            //新建文件夹
-//            ftpClient.makeDirectory("myDirectory");
-//
-//            //删除文件
-//            ftpClient.deleteFile("a.txt");
-//
-//            //重命名文件
-//            ftpClient.rename("旧文件名.txt","新文件名.txt");
-//            //aaaaaaaa
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     private void Login() {

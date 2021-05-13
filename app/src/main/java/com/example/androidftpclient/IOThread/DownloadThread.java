@@ -1,7 +1,9 @@
-package com.example.androidftpclient;
+package com.example.androidftpclient.IOThread;
 
 import android.os.Handler;
 import android.os.Message;
+
+import com.example.androidftpclient.FTPOperationProcessor;
 
 import org.apache.commons.net.ftp.FTP;
 

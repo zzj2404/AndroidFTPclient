@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
@@ -551,6 +552,10 @@ public class FTPOperationProcessor {
         FTPFile[] files = client.listFiles(new String(remote.getBytes(ENCODING),
                 FTP_ENCODING));
         return files;
+    }
+
+    public File[] GetLocalDirectory(){
+        return main.getExternalCacheDirs();
     }
     /**
      * 递归遍历本地机器的要上传的目录，遍历的同时，在FTP服务器上创建目录
