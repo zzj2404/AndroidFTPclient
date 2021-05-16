@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
@@ -44,7 +45,7 @@ import static java.util.jar.Pack200.Packer.ERROR;
  */
 
 public class FTPOperationProcessor {
-    private FTPClient client = new FTPClient();
+    static private FTPClient client = new FTPClient();
     /**
      * 默认编码
      */
@@ -326,7 +327,6 @@ public class FTPOperationProcessor {
                     }
                 }else {
                     System.out.println("local not exist");
-
                     //client.changeWorkingDirectory(remoteDirectory);
                     InputStream in= client.retrieveFileStream(new String(remote.getBytes("GBK"),"iso-8859-1"));
                     //InputStream in = null;
@@ -549,9 +549,37 @@ public class FTPOperationProcessor {
 
 
     public FTPFile[] GetFiles(String remote) throws IOException {
-        FTPFile[] files = client.listFiles(new String(remote.getBytes(ENCODING),
-                FTP_ENCODING));
-        return files;
+        final class FTPRunnable implements Runnable{
+            private FTPFile[] files;
+            @Override
+            public void run() {
+                try {
+                    files = client.listFiles(new String(remote.getBytes(ENCODING),
+                            FTP_ENCODING));
+                    System.out.println("test size:"+files.length);
+                    for (int i = 0; i < files.length; i++) {
+                        System.out.println(files[i].getName() + files[i].isDirectory() + files[i].isFile());
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            public FTPFile[] getData(){
+                return files;
+            }
+        }
+        FTPRunnable ftpRunnable = new FTPRunnable();
+        Thread thread = new Thread(ftpRunnable);
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return ftpRunnable.getData();
+//        FTPFile[] files = client.listFiles(new String(remote.getBytes(ENCODING),
+//                FTP_ENCODING));
+//        return files;
     }
 
     public File[] GetLocalDirectory(){
