@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ClipData;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -14,21 +13,18 @@ import android.os.Bundle;
 import com.example.androidftpclient.IOThread.DownloadThread;
 import com.example.androidftpclient.IOThread.UploadThread;
 
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,20 +34,14 @@ public class MainActivity extends AppCompatActivity {
     private static final int UPLOAD_FAIL = 2;
     private static final int DOWNLOAD_SUCCESS = 3;
     private static final int DOWNLOAD_FAIL = 4;
+    private static final int REQUEST_DOWNLOAD = 100;
 
-    private EditText username;
-    private EditText password;
-    private Button login;
-    private Button btn_file;
-    private Button btn_upload;
-    private Button btn_download;
-    private TextView tv;
-    private Button btn_test;
+    private EditText inputIP;
+    private EditText inputUsername;
+    private EditText inputPassword;
 
     private List<File> files;
-    private FTPClient ftpClient;
     private FTPOperationProcessor FTPProcessor;
-    private Context main;
 
     @SuppressLint("HandlerLeak")
     private Handler handler = new Handler(){
@@ -80,124 +70,105 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        username = findViewById(R.id.UserName);
-        password = findViewById(R.id.Password);
-        login = findViewById(R.id.Login);
-        btn_file= (Button) findViewById(R.id.btn_open);
-        btn_upload = (Button) findViewById(R.id.btn_upload);
-        btn_download = (Button) findViewById(R.id.btn_download);
-        btn_test = (Button) findViewById(R.id.btn_test);
+        inputIP = findViewById(R.id.IP);
+        inputUsername = findViewById(R.id.UserName);
+        inputPassword = findViewById(R.id.Password);
+
         files = new ArrayList<>();
-        tv = (TextView) findViewById(R.id.tv);
-        main = this;
 
         requestReadExternalPermission();
         requestWriteExternalPermission();
 
         FTPProcessor = new FTPOperationProcessor(this);
 
-        ftpClient = new FTPClient();
-        //根据服务器配置设置字符编码
-        ftpClient.setControlEncoding("UTF-8");
-
-        //设置连接服务器超时时间
-        ftpClient.setConnectTimeout(10000);
-
-
-        btn_file.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
-                chooseFile.setType("*/*");//匹配所有的类型
-                //intent.setType(“image/*”);//选择图片
-                //intent.setType(“audio/*”); //选择音频
-                //intent.setType(“video/*”); //选择视频 （mp4 3gp 是android支持的视频格式）
-                //intent.setType(“video/*;image/*”);//同时选择视频和图片
-                chooseFile.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);//设置可以多选文件
-                Intent intent = Intent.createChooser(chooseFile, "title");
-                startActivityForResult(intent, 1);
-            }
-        });
-
-        btn_upload.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                upload("/test1");
-            }
-        });
-
-        btn_download.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                download("/test1/test.jpg","/storage/emulated/0/Download");
-            }
-        });
-
-
-        //获取文件名列表的示例
-        btn_test.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        //从server上指定目录获取文件名列表
-                        FTPFile[] files;
-                        try {
-                            files = FTPProcessor.GetFiles("/test1");
-                            System.out.println("test size:"+files.length);
-                            for (int i = 0; i < files.length; i++) {
-                                System.out.println(files[i].getName() + files[i].isDirectory() + files[i].isFile());
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-
-
-                        //获取指定路径下的所有文件名
-                        String storageDir = Environment.getExternalStorageDirectory().toString();
-                        List<String> list;
-                        list = FileUtils.getFilesAllName(storageDir);
-                        for (int i = 0; i < list.size(); i++) {
-                            File f = new File(list.get(i));
-                            System.out.println(list.get(i) + f.isDirectory() + f.isFile());
-                        }
-
-                    }
-                }).start();
-            }
-        });
-
-        login.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Login();
-            }
-        });
+//        //获取文件名列表的示例
+//        btn_test.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        //获取指定路径下的所有文件名
+//                        System.out.println("1111111111");
+//                        String storageDir = Environment.getExternalStorageDirectory().toString();
+//                        List<String> list;
+//                        list = FileUtils.getFilesAllName(storageDir);
+//                        for (int i = 0; i < list.size(); i++) {
+//                            File f = new File(list.get(i));
+//                            System.out.println(list.get(i) + f.isDirectory() + f.isFile());
+//                        }
+//                    }
+//                }).start();
+//            }
+//        });
 
 
     }
 
-    private void Login() {
+    public void OpenLocalFileSelection(View view){
+        Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
+        chooseFile.setType("*/*");//匹配所有的类型
+        //intent.setType(“image/*”);//选择图片
+        //intent.setType(“audio/*”); //选择音频
+        //intent.setType(“video/*”); //选择视频 （mp4 3gp 是android支持的视频格式）
+        //intent.setType(“video/*;image/*”);//同时选择视频和图片
+        chooseFile.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);//设置可以多选文件
+        Intent intent = Intent.createChooser(chooseFile, "title");
+        startActivityForResult(intent, 1);
+    }
+
+    private void OpenUploadDialog(){
+        FTPFile[] fileArray;
         try {
-            FTPProcessor.connect("10.250.184.248",21,"john","1234");
+            fileArray = FTPProcessor.GetFiles("/");
+            UploadDialog dialog = new UploadDialog(fileArray);
+            dialog.setOnClickListener(new UploadDialog.OnClickListener() {
+                @Override
+                public void onUpload(String path) {
+                    upload(path);
+                }
+            });
+            dialog.show(this.getSupportFragmentManager(),"dialog");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    private void createDirectory(String path){
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    FTPProcessor.createDirectory(path);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
+
+    public void Login(View v) {
+        String ip = inputIP.getText().toString();
+        String username = inputUsername.getText().toString();
+        String password = inputPassword.getText().toString();
+        try {
+            FTPProcessor.connect(ip,21,username,password);//10.249.92.87 john 1234
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+
+    public void OpenDownloadActivity(View v){
+        FTPFile[] fileArray;
+        try {
+            fileArray = FTPProcessor.GetFiles("/");
+            Intent intent = new Intent(MainActivity.this, DownloadActivity.class);
+            intent.putExtra("list", (Serializable) fileArray);
+            startActivityForResult(intent, REQUEST_DOWNLOAD);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+//    private void createDirectory(String path){
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    FTPProcessor.createDirectory(path);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        }).start();
+//    }
 
     private void upload(String remotePath){
         Thread thread = new UploadThread(remotePath,files,FTPProcessor,handler);
@@ -238,6 +209,10 @@ public class MainActivity extends AppCompatActivity {
                         //tv.setText(path1);
                         //File file = new File(path1);
                     }
+                    OpenUploadDialog();
+                    break;
+                case REQUEST_DOWNLOAD:
+                    download(data.getStringExtra("path"),"/storage/emulated/0/1");
                     break;
             }
         }
