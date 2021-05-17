@@ -139,8 +139,8 @@ public class MainActivity extends AppCompatActivity {
         String username = inputUsername.getText().toString();
         String password = inputPassword.getText().toString();
         try {
-            //FTPProcessor.connect(ip,21,username,password);//10.249.92.87 john 1234
-            FTPProcessor.connect("10.249.92.87",21,"john","1234");
+            FTPProcessor.connect(ip,21,username,password);//10.249.92.87 john 1234
+            //FTPProcessor.connect("10.249.92.87",21,"john","1234");
         } catch (IOException e) {
             e.printStackTrace();
         }
