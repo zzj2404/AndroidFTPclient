@@ -140,9 +140,11 @@ public class MainActivity extends AppCompatActivity {
         String password = inputPassword.getText().toString();
         try {
             FTPProcessor.connect(ip,21,username,password);//10.249.92.87 john 1234
+            //FTPProcessor.connect("10.249.92.87",21,"john","1234");
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
     public void OpenDownloadActivity(View v){
@@ -173,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
     private void upload(String remotePath){
         Thread thread = new UploadThread(remotePath,files,FTPProcessor,handler);
         thread.start();
+        //deleteRemoteFile("/test1/0.jpg");
     }
 
     private void download(String remoteFilePath,String localPath){
@@ -180,6 +183,58 @@ public class MainActivity extends AppCompatActivity {
         thread.start();
     }
 
+    //例createDirectory("/test1/lala/")
+    //要以斜杠结尾
+    private void createDirectory(String path){
+        try {
+            if (FTPProcessor.createDirectory(path) == FTPOperationProcessor.UploadStatus.CREATE_DIRECTORY_SUCCESS){
+                Toast.makeText(MainActivity.this,"创建成功^_^",Toast.LENGTH_LONG).show();
+            }
+            else{
+                Toast.makeText(MainActivity.this,"创建失败>_<",Toast.LENGTH_LONG).show();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //例deleteDirectory("/test1/lala")
+    private void deleteDirectory(String path){
+        try {
+            if (FTPProcessor.deleteDirectory(path) == FTPOperationProcessor.UploadStatus.DELETE_REMOTE_SUCCESS){
+                Toast.makeText(MainActivity.this,"删除成功^_^",Toast.LENGTH_LONG).show();
+            }
+            else{
+                Toast.makeText(MainActivity.this,"删除失败>_<",Toast.LENGTH_LONG).show();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //例deleteRemoteFile("/test1/0.jpg")
+//    private void deleteRemoteFile(String remote){
+//        try {
+//            if (FTPProcessor.deleteFile(path) == FTPOperationProcessor.UploadStatus.DELETE_REMOTE_SUCCESS){
+//                Toast.makeText(MainActivity.this,"删除成功^_^",Toast.LENGTH_LONG).show();
+//            }
+//            else{
+//                Toast.makeText(MainActivity.this,"删除失败>_<",Toast.LENGTH_LONG).show();
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            FTPProcessor.disConnect();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private String path;
     @Override

@@ -85,7 +85,8 @@ public class FTPOperationProcessor {
         REMOTE_BIGGER_LOCAL, // 远程文件大于本地文件
         UPLOAD_FROM_BREAK_SUCCESS, // 断点续传成功
         UPLOAD_FROM_BREAK_FAILED, // 断点续传失败
-        DELETE_REMOTE_FAILD; // 删除远程文件失败
+        DELETE_REMOTE_FAILD, // 删除远程文件失败
+        DELETE_REMOTE_SUCCESS;
     }
 
     private static final String TAG = "MainActivity";
@@ -477,38 +478,7 @@ public class FTPOperationProcessor {
 
         System.out.println(status);
         return status;
-//        UploadStatus status = null;
-//        long localreadbytes = 0l;
-//        RandomAccessFile raf = new RandomAccessFile(localFile, "r");
-//        OutputStream out = client.appendFileStream(new String(remote
-//                .getBytes(ENCODING), FTP_ENCODING));
-//        // 断点续传,根据FTP服务器上文件与本地机器上文件的大小比较来判断
-//        if (remoteSize > 0) {
-//            client.setRestartOffset(remoteSize);
-//            raf.seek(remoteSize);
-//            localreadbytes = remoteSize;
-//        }
-//        byte[] bytes = new byte[8096];
-//        int c;
-//        while ((c = raf.read(bytes)) != -1) {
-//            out.write(bytes, 0, c);
-//            localreadbytes += c;
-//        }
-//        if (out != null)
-//            out.flush();
-//        if (raf != null)
-//            raf.close();
-//        if (out != null)
-//            out.close();
-//        boolean result = client.completePendingCommand();
-//        if (remoteSize > 0) {
-//            status = result ? UploadStatus.UPLOAD_FROM_BREAK_SUCCESS
-//                    : UploadStatus.UPLOAD_FROM_BREAK_FAILED;
-//        } else {
-//            status = result ? UploadStatus.UPLOAD_NEW_FILE_SUCCESS
-//                    : UploadStatus.UPLOAD_NEW_FILE_FAILED;
-//        }
-//        return status;
+
     }
 
     /**
@@ -519,34 +489,117 @@ public class FTPOperationProcessor {
      * @throws IOException
      */
     public UploadStatus createDirectory(String remote) throws IOException {
-//        String[] names = client.listNames();
-//        for ( int i = 0; i < names.length; i++) {
-//            System.out.println(names[i]);
-//        }
-        int start = 0, end = 0;
-        start = remote.startsWith("/") ? 1 : 0;
-        end = remote.indexOf("/", start);
-        int subcount = 0;
-        for (; start < end;subcount++) {
-            String subDirectory = remote.substring(start, end);
-            if (!client.changeWorkingDirectory(new String(subDirectory
-                    .getBytes(ENCODING), FTP_ENCODING))) {
-                // 目录不存在则在服务器端创建目录
-                if (!client.makeDirectory(new String(subDirectory.getBytes(ENCODING),
-                        FTP_ENCODING))) {
-                    return UploadStatus.CREATE_DIRECTORY_FAIL;
-                } else {
-                    client.changeWorkingDirectory(new String(subDirectory
-                            .getBytes(ENCODING), FTP_ENCODING));
+        final class FTPRunnable implements Runnable {
+            private UploadStatus status = UploadStatus.CREATE_DIRECTORY_FAIL;
+            @Override
+            public void run() {
+                try {
+                    int start = 0, end = 0;
+                    start = remote.startsWith("/") ? 1 : 0;
+                    end = remote.indexOf("/", start);
+                    int subcount = 0;
+                    for (; start < end;subcount++) {
+
+                        String subDirectory = remote.substring(start, end);
+                        System.out.println(subDirectory);
+                        if (!client.changeWorkingDirectory(new String(subDirectory
+                                .getBytes(ENCODING), FTP_ENCODING))) {
+                            // 目录不存在则在服务器端创建目录
+                            if (!client.makeDirectory(new String(subDirectory.getBytes(ENCODING),
+                                    FTP_ENCODING))) {
+                                status = UploadStatus.CREATE_DIRECTORY_FAIL;
+                                return;
+                            } else {
+                                client.changeWorkingDirectory(new String(subDirectory
+                                        .getBytes(ENCODING), FTP_ENCODING));
+                            }
+                        }
+                        start = end + 1;
+                        end = remote.indexOf("/", start);
+                        System.out.println(String.valueOf(start)+" "+String.valueOf(end));
+                    }
+                    for (int i =0;i<subcount;i++) {
+                            client.changeToParentDirectory();
+                    }
+                    status = UploadStatus.CREATE_DIRECTORY_SUCCESS;
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
-            start = end + 1;
-            end = remote.indexOf("/", start);
+            public UploadStatus getStatus(){return status;}
         }
-        for (int i =0;i<subcount;i++) client.changeToParentDirectory();
-        return UploadStatus.CREATE_DIRECTORY_SUCCESS;
+
+        FTPRunnable ftpRunnable = new FTPRunnable();
+        Thread thread = new Thread(ftpRunnable);
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return ftpRunnable.getStatus();
     }
 
+
+    public UploadStatus deleteDirectory(String remote) throws IOException{
+        final class FTPRunnable implements Runnable {
+            private UploadStatus status = UploadStatus.DELETE_REMOTE_FAILD;
+            @Override
+            public void run() {
+                try {
+                    if (client.removeDirectory(remote)){
+                        status = UploadStatus.DELETE_REMOTE_SUCCESS;
+                    }
+                    else{
+                        status = UploadStatus.DELETE_REMOTE_FAILD;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            public UploadStatus getStatus(){return status;}
+        }
+
+        FTPRunnable ftpRunnable = new FTPRunnable();
+        Thread thread = new Thread(ftpRunnable);
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return ftpRunnable.getStatus();
+    }
+
+    public UploadStatus deleteFile(String remote) throws IOException{
+        final class FTPRunnable implements Runnable {
+            private UploadStatus status = UploadStatus.DELETE_REMOTE_FAILD;
+            @Override
+            public void run() {
+                try {
+                    if (client.deleteFile(remote)){
+                        status = UploadStatus.DELETE_REMOTE_SUCCESS;
+                    }
+                    else{
+                        status = UploadStatus.DELETE_REMOTE_FAILD;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            public UploadStatus getStatus(){return status;}
+        }
+
+        FTPRunnable ftpRunnable = new FTPRunnable();
+        Thread thread = new Thread(ftpRunnable);
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return ftpRunnable.getStatus();
+    }
 
     public FTPFile[] GetFiles(String remote) throws IOException {
         final class FTPRunnable implements Runnable{
