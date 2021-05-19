@@ -88,7 +88,10 @@ public class FTPOperationProcessor {
         DELETE_REMOTE_FAILD, // 删除远程文件失败
         DELETE_REMOTE_SUCCESS;
     }
-
+    public enum LoginStatus {
+        LOGIN_SUCCESS,
+        LOGIN_FAIL;
+    }
     private static final String TAG = "MainActivity";
 
     /**
@@ -101,34 +104,15 @@ public class FTPOperationProcessor {
      * @return 连接成功返回true, 失败返回false
      * @throws IOException
      */
-    public void connect(String hostname, int port, String username,
+    public LoginStatus connect(String hostname, int port, String username,
                         String password) throws IOException {
-//        int reply;
-//        client.connect(hostname,port);
-//        System.out.println("Connected to " + hostname + ".");
-//        System.out.println(client.getReplyString());
-//        reply = client.getReplyCode();
-//
-//        if (!FTPReply.isPositiveCompletion(reply)) {
-//            client.disconnect();
-//            Log.d(TAG,"FTP服务器拒绝连接！");
-//            System.out.println("FTP服务器拒绝连接！");
-//            throw new IOException("FTP服务器拒绝连接！");
-//        } else {
-//            if (client.login(username, password)) {
-//                client.setListHiddenFiles(true);
-//                Log.d(TAG,"连接成功！");
-//                return true;
-//            }
-//        }
-//        return false;
-        new Thread(new Runnable() {
+        final class FTPRunnable implements Runnable {
+            private LoginStatus status = LoginStatus.LOGIN_FAIL;
             @Override
             public void run() {
                 try {
                     //登录
                     client.connect(hostname, port);
-//            ftpClient.login(this.username.getText().toString(), this.password.getText().toString());
                     client.login(username, password);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -140,12 +124,23 @@ public class FTPOperationProcessor {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    ThreadToast("登录失败>_<");
+                    status = LoginStatus.LOGIN_FAIL;
                 } else {
-                    ThreadToast("登录成功^_^");
+                    status = LoginStatus.LOGIN_SUCCESS;
                 }
             }
-        }).start();
+            public LoginStatus getStatus(){return status;}
+        }
+
+        FTPRunnable ftpRunnable = new FTPRunnable();
+        Thread thread = new Thread(ftpRunnable);
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return ftpRunnable.getStatus();
 
     }
 
@@ -404,7 +399,7 @@ public class FTPOperationProcessor {
                 File f = new File(local);
                 long localSize = f.length();
                 if (remoteSize == localSize) {
-                    ThreadToast("已经存在的文件>_<");
+                    //ThreadToast("已经存在的文件>_<");
                     return UploadStatus.FILE_EXITS;
                 } else if (remoteSize > localSize) {
                     return UploadStatus.REMOTE_BIGGER_LOCAL;
@@ -695,23 +690,6 @@ public class FTPOperationProcessor {
         }
     }
 
-    private void ThreadToast(String text){
-        Looper myLooper = Looper.myLooper();
-        Toast toast = null;
-        if (myLooper == null) {
-            Looper.prepare();
-            myLooper = Looper.myLooper();
-        }
-        if (toast == null) {
-            toast = Toast.makeText(main, text, Toast.LENGTH_SHORT);
-        }
-        toast.show();
-        if ( myLooper != null) {
-            Looper.loop();
-            myLooper.quit();
-        }
-        myLooper.quit();
-    }
 
 
 
