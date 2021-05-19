@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int DOWNLOAD_SUCCESS = 3;
     private static final int DOWNLOAD_FAIL = 4;
     private static final int REQUEST_DOWNLOAD = 100;
+    private static final int REQUEST_DIRECTORY = 200;
 
     private EditText inputIP;
     private EditText inputUsername;
@@ -159,6 +160,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void OpenDirectoryOPActivity(View v){
+        FTPFile[] fileArray;
+        try {
+            fileArray = FTPProcessor.GetFiles("/");
+            Intent intent = new Intent(MainActivity.this, DirectoryOperationActivity.class);
+            intent.putExtra("list", (Serializable) fileArray);
+            startActivityForResult(intent, REQUEST_DIRECTORY);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 //    private void createDirectory(String path){
 //        new Thread(new Runnable() {
 //            @Override
@@ -268,6 +280,13 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case REQUEST_DOWNLOAD:
                     download(data.getStringExtra("path"),"/storage/emulated/0/1");
+                    break;
+                case REQUEST_DIRECTORY:
+                    if (data.getStringExtra("operation").equals("delete")){
+                        deleteDirectory(data.getStringExtra("path"));
+                    } else {
+                        createDirectory(data.getStringExtra("path"));
+                    }
                     break;
             }
         }

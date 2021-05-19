@@ -58,6 +58,7 @@ public class UploadDialog extends DialogFragment {
                     }
                 }
             }
+
         });
         fileAdapter.setFiles(files);
         recyclerView.setAdapter(fileAdapter);
