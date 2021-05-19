@@ -80,10 +80,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
     public void onBindViewHolder(FileAdapter.ViewHolder holder, int position) {
         holder.fileNameView.setText(fileArray[position].getName());
         holder.fileInfoView.setText(format.format(fileArray[position].getTimestamp().getTime()));
-        if (fileArray[position].getType() != FTPFile.DIRECTORY_TYPE){
-            holder.fileNameView.setTextColor(Color.BLACK);
-            holder.btnDelete.setVisibility(View.GONE);
-        } else if(type != DIRECTORY_OPERATION){
+        if (type != DIRECTORY_OPERATION) {
             holder.btnDelete.setVisibility(View.GONE);
         } else {
             holder.btnDelete.setOnClickListener(new View.OnClickListener() {
@@ -93,6 +90,12 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
                 }
             });
         }
+        if (fileArray[position].getType() != FTPFile.DIRECTORY_TYPE) {
+            holder.fileNameView.setTextColor(Color.BLACK);
+        } else {
+            holder.fileNameView.setTextColor(Color.parseColor("#FF5722"));
+        }
+        System.out.println(fileArray[position].getName()+" "+fileArray[position].getType());
     }
 
     @Override

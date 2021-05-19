@@ -21,6 +21,7 @@ public class DirectoryOperationActivity extends AppCompatActivity {
     private EditText inputDirectoryName;
     private String filePath = "";
     private FTPOperationProcessor ftpProcessor;
+    private FileAdapter fileAdapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,7 +33,8 @@ public class DirectoryOperationActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recycler_view_d);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(linearLayoutManager);
-        FileAdapter fileAdapter = new FileAdapter(this);
+        fileAdapter = new FileAdapter(this);
+        fileAdapter.setDirectoryType();
         fileAdapter.setOnItemClickListener(new FileAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(FTPFile file) {
@@ -51,6 +53,10 @@ public class DirectoryOperationActivity extends AppCompatActivity {
             public void onDeleteClick(FTPFile file) {
                 Intent intent = new Intent();
                 intent.putExtra("operation","delete");
+                if (file.getType() == FTPFile.DIRECTORY_TYPE)
+                    intent.putExtra("type", "directory");
+                else
+                    intent.putExtra("type", "file");
                 intent.putExtra("path",filePath+"/"+file.getName());
                 setResult(RESULT_OK, intent);
                 finish();
@@ -67,5 +73,23 @@ public class DirectoryOperationActivity extends AppCompatActivity {
         intent.putExtra("path",filePath+"/"+directoryName+"/");
         setResult(RESULT_OK, intent);
         finish();
+    }
+
+    public void ReturnLastDirectory(View v){
+        if (filePath.isEmpty()){
+            Intent intent = new Intent();
+            setResult(0,intent);
+            finish();
+        }
+        int i = filePath.lastIndexOf("/");
+        filePath = filePath.substring(0,i==-1?0:i);
+        try {
+            if (filePath.isEmpty())
+                fileAdapter.setFiles(ftpProcessor.GetFiles("/"));
+            else
+                fileAdapter.setFiles(ftpProcessor.GetFiles(filePath));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -17,6 +17,7 @@ import java.io.IOException;
 public class DownloadActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private String filePath = "";
+    private FileAdapter fileAdapter;
     private FTPOperationProcessor ftpProcessor;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,7 +29,7 @@ public class DownloadActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recycler_view_files_d);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(linearLayoutManager);
-        FileAdapter fileAdapter = new FileAdapter(this);
+        fileAdapter = new FileAdapter(this);
         fileAdapter.setOnItemClickListener(new FileAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(FTPFile file) {
@@ -49,5 +50,23 @@ public class DownloadActivity extends AppCompatActivity {
         });
         fileAdapter.setFiles((FTPFile[]) getIntent().getSerializableExtra("list"));
         recyclerView.setAdapter(fileAdapter);
+    }
+
+    public void ReturnLastDirectory(View v){
+        if (filePath.isEmpty()){
+            Intent intent = new Intent();
+            setResult(0,intent);
+            finish();
+        }
+        int i = filePath.lastIndexOf("/");
+        filePath = filePath.substring(0,i==-1?0:i);
+        try {
+            if (filePath.isEmpty())
+                fileAdapter.setFiles(ftpProcessor.GetFiles("/"));
+            else
+                fileAdapter.setFiles(ftpProcessor.GetFiles(filePath));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

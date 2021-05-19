@@ -191,4 +191,19 @@ public class FileUtils {
         }
         return s;
     }
+
+    /**
+     * 获取目录下所有文件
+     * @param path 指定目录路径
+     * @return
+     */
+    public static File[] getFiles(String path) {
+        File file=new File(path);
+        File[] files=file.listFiles();
+        if (files == null){
+            Log.e("error","空目录");
+            return null;
+        }
+        return files;
+    }
 }
