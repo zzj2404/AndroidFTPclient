@@ -6,6 +6,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -17,6 +18,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -43,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
 
     private List<File> files;
     private FTPOperationProcessor FTPProcessor;
+
+    private SharedPreferences.Editor editor;
+    private SharedPreferences sharedPreferences;
+
 
     @SuppressLint("HandlerLeak")
     private Handler handler = new Handler(){
@@ -81,6 +87,25 @@ public class MainActivity extends AppCompatActivity {
         requestWriteExternalPermission();
 
         FTPProcessor = new FTPOperationProcessor(this);
+
+
+        sharedPreferences = getSharedPreferences("login", MODE_PRIVATE);
+        editor = sharedPreferences.edit();
+        String IP = sharedPreferences.getString("IP","null");
+        if (!IP.equals("null")){
+            inputIP.setText(IP);
+            inputUsername.setText(sharedPreferences.getString("Username","null"));
+            inputPassword.setText(sharedPreferences.getString("Password","null"));
+        }
+
+        Button test = findViewById(R.id.btn_test);
+        //test.setVisibility(View.GONE);
+        test.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                deleteRemoteFile("/test1/0.jpg");
+            }
+        });
 
 //        //获取文件名列表的示例
 //        btn_test.setOnClickListener(new View.OnClickListener() {
@@ -139,13 +164,23 @@ public class MainActivity extends AppCompatActivity {
         String ip = inputIP.getText().toString();
         String username = inputUsername.getText().toString();
         String password = inputPassword.getText().toString();
+        FTPOperationProcessor.LoginStatus status = FTPOperationProcessor.LoginStatus.LOGIN_FAIL;
         try {
-            FTPProcessor.connect(ip,21,username,password);//10.249.92.87 john 1234
+            status = FTPProcessor.connect(ip,21,username,password);//10.249.92.87 john 1234
             //FTPProcessor.connect("10.249.92.87",21,"john","1234");
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        if (status == FTPOperationProcessor.LoginStatus.LOGIN_SUCCESS){
+            Toast.makeText(MainActivity.this,"登录成功^_^",Toast.LENGTH_LONG).show();
+            editor.putString("IP",ip);
+            editor.putString("Username",username);
+            editor.putString("Password",password);
+            editor.commit();
+        }
+        else{
+            Toast.makeText(MainActivity.this,"登录失败>_<",Toast.LENGTH_LONG).show();
+        }
     }
 
     public void OpenDownloadActivity(View v){
@@ -225,18 +260,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //例deleteRemoteFile("/test1/0.jpg")
-//    private void deleteRemoteFile(String remote){
-//        try {
-//            if (FTPProcessor.deleteFile(path) == FTPOperationProcessor.UploadStatus.DELETE_REMOTE_SUCCESS){
-//                Toast.makeText(MainActivity.this,"删除成功^_^",Toast.LENGTH_LONG).show();
-//            }
-//            else{
-//                Toast.makeText(MainActivity.this,"删除失败>_<",Toast.LENGTH_LONG).show();
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
+    private void deleteRemoteFile(String remote){
+        try {
+            if (FTPProcessor.deleteFile(remote) == FTPOperationProcessor.UploadStatus.DELETE_REMOTE_SUCCESS){
+                Toast.makeText(MainActivity.this,"删除成功^_^",Toast.LENGTH_LONG).show();
+            }
+            else{
+                Toast.makeText(MainActivity.this,"删除失败>_<",Toast.LENGTH_LONG).show();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     @Override
     protected void onDestroy() {
