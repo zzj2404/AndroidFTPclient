@@ -263,7 +263,7 @@ public class FTPOperationProcessor {
      */
     public DownloadStatus download(String remote,String localDirectory) throws IOException{
         //设置被动模式
-        client.enterLocalPassiveMode();
+        //client.enterLocalPassiveMode();
         //设置以二进制方式传输
         client.setFileType(FTP.BINARY_FILE_TYPE);
         DownloadStatus result;
@@ -373,7 +373,7 @@ public class FTPOperationProcessor {
      */
     public UploadStatus upload(String local, String remote) throws IOException {
         // 设置PassiveMode传输
-        client.enterLocalPassiveMode();
+        //client.enterLocalPassiveMode();
         // 设置以二进制流的方式传输
         client.setFileType(FTPClient.BINARY_FILE_TYPE);
         client.setControlEncoding(ENCODING);
@@ -383,13 +383,13 @@ public class FTPOperationProcessor {
         // 对远程目录的处理
         String remoteFileName = remote.substring(remote.lastIndexOf("/") + 1);
         String directory = remote.substring(0,remote.lastIndexOf("/"));
-        if (remote.contains("/")) {
-            // 创建服务器远程目录结构，创建失败直接返回
-            // 以下两句存在问题??
-             if (createDirectory(remote) == UploadStatus.CREATE_DIRECTORY_FAIL) {
-                return UploadStatus.CREATE_DIRECTORY_FAIL;
-             }
-        }
+//         if (remote.contains("/")) {
+//             // 创建服务器远程目录结构，创建失败直接返回
+//             // 以下两句存在问题??
+//              if (createDirectory(remote) == UploadStatus.CREATE_DIRECTORY_FAIL) {
+//                 return UploadStatus.CREATE_DIRECTORY_FAIL;
+//              }
+//         }
         // 检查远程是否存在文件
         FTPFile[] files = client.listFiles(directory);
         //System.out.println("size "+files.length);
