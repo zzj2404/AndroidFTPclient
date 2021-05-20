@@ -16,6 +16,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.util.Calendar;
 import java.util.List;
 
 import org.apache.commons.net.ftp.FTP;
@@ -689,9 +690,5 @@ public class FTPOperationProcessor {
             }
         }
     }
-
-
-
-
 }
 

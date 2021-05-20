@@ -14,11 +14,11 @@ import android.os.Bundle;
 import com.example.androidftpclient.IOThread.DownloadThread;
 import com.example.androidftpclient.IOThread.UploadThread;
 
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int DOWNLOAD_SUCCESS = 3;
     private static final int DOWNLOAD_FAIL = 4;
     private static final int REQUEST_DOWNLOAD = 100;
+    private static final int REQUEST_DIRECTORY = 200;
 
     private EditText inputIP;
     private EditText inputUsername;
@@ -96,38 +97,6 @@ public class MainActivity extends AppCompatActivity {
             inputUsername.setText(sharedPreferences.getString("Username","null"));
             inputPassword.setText(sharedPreferences.getString("Password","null"));
         }
-
-        Button test = findViewById(R.id.btn_test);
-        //test.setVisibility(View.GONE);
-        test.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                deleteRemoteFile("/test1/0.jpg");
-            }
-        });
-
-//        //获取文件名列表的示例
-//        btn_test.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        //获取指定路径下的所有文件名
-//                        System.out.println("1111111111");
-//                        String storageDir = Environment.getExternalStorageDirectory().toString();
-//                        List<String> list;
-//                        list = FileUtils.getFilesAllName(storageDir);
-//                        for (int i = 0; i < list.size(); i++) {
-//                            File f = new File(list.get(i));
-//                            System.out.println(list.get(i) + f.isDirectory() + f.isFile());
-//                        }
-//                    }
-//                }).start();
-//            }
-//        });
-
-
     }
 
     public void OpenLocalFileSelection(View view){
@@ -153,10 +122,22 @@ public class MainActivity extends AppCompatActivity {
                     upload(path);
                 }
             });
-            dialog.show(this.getSupportFragmentManager(),"dialog");
+            dialog.show(this.getSupportFragmentManager(),"upload_dialog");
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void OpenLocalFileDialog(String ftpPath){
+        LocalFileDialog dialog = new LocalFileDialog();
+        dialog.setOnClickListener(new LocalFileDialog.OnClickListener() {
+            @Override
+            public void onSelect(String path) {
+                download(ftpPath, path);
+                System.out.println(path+"!!!!!!!!!!!");
+            }
+        });
+        dialog.show(this.getSupportFragmentManager(),"local_select_dialog");
     }
 
     public void Login(View v) {
@@ -194,18 +175,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-//    private void createDirectory(String path){
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                try {
-//                    FTPProcessor.createDirectory(path);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }).start();
-//    }
+    public void OpenDirectoryOPActivity(View v){
+        FTPFile[] fileArray;
+        try {
+            fileArray = FTPProcessor.GetFiles("/");
+            Intent intent = new Intent(MainActivity.this, DirectoryOperationActivity.class);
+            intent.putExtra("list", (Serializable) fileArray);
+            startActivityForResult(intent, REQUEST_DIRECTORY);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void upload(String remotePath){
         Thread thread = new UploadThread(remotePath,files,FTPProcessor,handler);
@@ -302,7 +282,18 @@ public class MainActivity extends AppCompatActivity {
                     OpenUploadDialog();
                     break;
                 case REQUEST_DOWNLOAD:
-                    download(data.getStringExtra("path"),"/storage/emulated/0/1");
+                    OpenLocalFileDialog(data.getStringExtra("path"));
+//                    download(data.getStringExtra("path"),"/storage/emulated/0/Download");
+                    break;
+                case REQUEST_DIRECTORY:
+                    if (data.getStringExtra("operation").equals("delete")){
+                        if (data.getStringExtra("type").equals("directory"))
+                            deleteDirectory(data.getStringExtra("path"));
+                        else
+                            deleteRemoteFile(data.getStringExtra("path"));
+                    } else {
+                        createDirectory(data.getStringExtra("path"));
+                    }
                     break;
             }
         }

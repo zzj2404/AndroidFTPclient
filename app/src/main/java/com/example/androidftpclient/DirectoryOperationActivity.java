@@ -7,6 +7,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 
 import com.example.androidftpclient.Adapter.FileAdapter;
 
@@ -14,22 +16,25 @@ import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.IOException;
 
-public class DownloadActivity extends AppCompatActivity {
+public class DirectoryOperationActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
+    private EditText inputDirectoryName;
     private String filePath = "";
-    private FileAdapter fileAdapter;
     private FTPOperationProcessor ftpProcessor;
+    private FileAdapter fileAdapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_download);
+        setContentView(R.layout.activity_directory_operation);
 
         ftpProcessor = new FTPOperationProcessor(this);
 
-        recyclerView = findViewById(R.id.recycler_view_files_d);
+        inputDirectoryName = findViewById(R.id.DirectoryName);
+        recyclerView = findViewById(R.id.recycler_view_d);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(linearLayoutManager);
         fileAdapter = new FileAdapter(this);
+        fileAdapter.setDirectoryType();
         fileAdapter.setOnItemClickListener(new FileAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(FTPFile file) {
@@ -40,16 +45,34 @@ public class DownloadActivity extends AppCompatActivity {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                } else {
-                    Intent intent = new Intent();
-                    intent.putExtra("path",filePath+"/"+file.getName());
-                    setResult(RESULT_OK, intent);
-                    finish();
                 }
+            }
+        });
+        fileAdapter.setOnDeleteClickListener(new FileAdapter.OnDeleteClickListener() {
+            @Override
+            public void onDeleteClick(FTPFile file) {
+                Intent intent = new Intent();
+                intent.putExtra("operation","delete");
+                if (file.getType() == FTPFile.DIRECTORY_TYPE)
+                    intent.putExtra("type", "directory");
+                else
+                    intent.putExtra("type", "file");
+                intent.putExtra("path",filePath+"/"+file.getName());
+                setResult(RESULT_OK, intent);
+                finish();
             }
         });
         fileAdapter.setFiles((FTPFile[]) getIntent().getSerializableExtra("list"));
         recyclerView.setAdapter(fileAdapter);
+    }
+
+    public void Create(View v){
+        String directoryName = inputDirectoryName.getText().toString();
+        Intent intent = new Intent();
+        intent.putExtra("operation","create");
+        intent.putExtra("path",filePath+"/"+directoryName+"/");
+        setResult(RESULT_OK, intent);
+        finish();
     }
 
     public void ReturnLastDirectory(View v){
