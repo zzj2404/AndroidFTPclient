@@ -265,7 +265,7 @@ public class FTPOperationProcessor {
      */
     public DownloadStatus download(String remote,String localDirectory) throws IOException{
         //设置被动模式
-        client.enterLocalPassiveMode();
+        //client.enterLocalPassiveMode();
         //设置以二进制方式传输
         client.setFileType(FTP.BINARY_FILE_TYPE);
         DownloadStatus result;
@@ -376,7 +376,7 @@ public class FTPOperationProcessor {
      */
     public UploadStatus upload(String local, String remote) throws IOException {
         // 设置PassiveMode传输
-        client.enterLocalPassiveMode();
+        //client.enterLocalPassiveMode();
         // 设置以二进制流的方式传输
         client.setFileType(FTPClient.BINARY_FILE_TYPE);
         client.setControlEncoding(ENCODING);
